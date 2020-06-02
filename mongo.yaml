@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb-deployment
+  #namespace is not really usefull is small project --> remove the line and it will be in default namespace
+  namespace: database
+  labels:
+    app: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      volumes:
+      - name: dbdata
+        persistentVolumeClaim:
+          claimName: claim-pv
+      containers:
+      - name: mongodb
+        image: mongo
+        volumeMounts:
+        - name: dbdata
+          mountPath: /data/dbdata
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongo-root-username
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongo-root-password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+  #namespace is not really usefull is small project --> remove the line and it will be in default namespace
+  namespace: database
+spec:
+  selector: #to connect to Pod through label
+    app: mongodb
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017 #container port --> has to match with the containerPort bellow
